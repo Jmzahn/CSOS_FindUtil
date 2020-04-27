@@ -7,91 +7,129 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
-void find_recursive(char *where_to_look, const char *args[3]);
+void find_recursive(char *where_to_look, const char *args[3], char *optArgs[]);
 
-void checkCriteria(char *where_to_look, const char *args[3], char* temp_full_path, char* temp, struct stat f_stat);
+void checkCriteria(char *where_to_look, const char *args[3], char *optArgs[], char* temp_full_path, char* temp, struct stat f_stat);
+
+void execAction(char *where_to_look, char *optArgs[], char* temp_full_path);
 
 int main(int argc, char *argv[])
 {
     int pathGiven = 1;
-    char *whereToLook;
+    char *whereToLook, *name, *mmin, *inum;
     char buf[_PC_PATH_MAX];
     const char *args[3];
-    args[0] = "";
-    args[1] = "";
-    args[2] = "";
+    args[0] = "";//criteria flag
+    args[1] = "";//criteria
+    args[2] = "";//action/delete
+    char **optArgs;
+    int c;
+    int w = 0;
+    int n = 0;
+    int m = 0;
+    int i = 0;
+    int d = 0;
+    int a = 0;
+    
     //only find was called
     if(argc == 1)
     {
-        pathGiven = 0;
-        
         if(getcwd(buf, sizeof(buf)));
         else{
             perror("getcwd() error");
             return -1;
         }
         
-        find_recursive(buf, args);
+        find_recursive(buf, args, optArgs);
     }
-    //find and args
-    else
+    else//find and args
     {
-        for(int i=1; i<argc; i++)
-        {
-            //check for criteria
-            if(strcmp(argv[i],"-name")==0||strcmp(argv[i],"-mmin")==0||strcmp(argv[i],"-inum")==0||strcmp(argv[i],"-delete")==0)
-            {
-                if(i==1)//if no path provided
-                {
-                    pathGiven=0;
-                    //save current dir as path
-                    if(getcwd(buf, sizeof(buf)));
-                    else{
-                        perror("getcwd() error");
-                        return -1;
-                    }
-                    //if no criteria provided
-                    if(strcmp(argv[i],"-delete")==0)
-                    {
-                        args[0] = "";
-                        args[1] = "";
-                        args[2] = argv[i];
-                    }else{//if not -delete must be criteria
-                        args[0] = argv[i];
-                        i++;
-                        args[1] = argv[i];
-                    }
-                }else{
-                    if(strcmp(argv[i],"-delete")==0)
-                    {
-                        args[2] = argv[i];
-                    }else{//if not -delete must be criteria
-                        args[0] = argv[i];
-                        i++;
-                        args[1] = argv[i];
-                    }
-                }
-            }else{//if not criteria, must be whereToLook or delete
-                //check if whereToLook
-                if(pathGiven)
-                {
-                    whereToLook = argv[i];
-                }else{//we shouldnt reach this if user syntax is correct
-                    fprintf (stderr, "USAGE: %s (where-to-look) criteria (-delete)\n", argv[0]);
-		            exit (-1);
-                }
+        //USAGE: find -w <whereToLook> criteria(-n/-m/-i) <name/mmin/inum> action(-d/-a) <optAction>
+        while((c = getopt(argc,argv, "w:n:m:i:da")) != -1){
+            switch(c){
+                case 'w':
+                    w = 1;
+                    whereToLook = optarg;
+                    break;
+                case 'n':
+                    n = 1;
+                    name = optarg;
+                    break;
+                case 'm':
+                    m = 1;
+                    mmin = optarg;
+                    break;
+                case 'i':
+                    i = 1;
+                    inum = optarg;
+                    break;
+                case 'd':
+                    d = 1;
+                    break;
+                case 'a':
+                    a = 1;
+                    break;
+                default:
+                    printf("Invalid option detected.\n");
             }
         }
-        if(pathGiven)
-            find_recursive(whereToLook, args);
-        else
-            find_recursive(buf, args);
+        argc -= optind;
+	    argv += optind;
+        if(w==0){
+            if(getcwd(buf, sizeof(buf))){
+                whereToLook = buf;
+            }
+            else{
+                perror("getcwd() error");
+                return -1;
+            }
+        }
+        if(n+m+i>1)
+        {
+            printf("Too many criteria flags provided!");
+            return -1;
+        }
+        else if(n==1){
+            args[0] = "-name";
+            args[1] = name;
+        }
+        else if(m==1){
+            args[0] = "-mmin";
+            args[1] = mmin;
+        }
+        else if(i==1){
+            args[0] = "-inum";
+            args[1] = inum;
+        }
+        if(a+d>1){
+            printf("Too many action flags provided!\nCannot delete and preform action!");
+            return -1;
+        }
+        else if(d==1){
+            args[2] = "-delete";
+        }
+        else if(a==1){
+            args[2] = "-action";
+            optArgs = argv;
+        }
+        //printf("whereToLook :%s\n",whereToLook);
+        //printf("args[0] :%s\n",args[0]);
+        //printf("args[1] :%s\n",args[1]);
+        //printf("args[2] :%s\n",args[2]);
+        //if (argc > 0) {
+		//    printf("There are %d command-line arguments left to process:\n", argc);
+		//    for (i = 0; i < argc; i++) {
+		//	    printf("Argument %d: '%s'\n", i + 1, optArgs[i]);
+		//    }
+	    //}
+        find_recursive(whereToLook, args, optArgs);
     }
     return 0;
 }
 
-void find_recursive(char *where_to_look, const char *args[3])
+void find_recursive(char *where_to_look, const char *args[3], char *optArgs[])
 {
     DIR *sub_dp = opendir(where_to_look);//open a directory stream
     struct dirent *sub_dirp;//define sub_dirp
@@ -107,7 +145,7 @@ void find_recursive(char *where_to_look, const char *args[3])
         char *tempD ="";
         if(stat(where_to_look,&f_stat)==0){
             if((f_stat.st_mode & __S_IFMT) == __S_IFDIR)
-                checkCriteria(where_to_look, args, where_to_look, tempD, f_stat);
+                checkCriteria(where_to_look, args, optArgs, where_to_look, tempD, f_stat);
         }
         else{
             perror("stat error");
@@ -136,7 +174,7 @@ void find_recursive(char *where_to_look, const char *args[3])
                 //check criteria only if looking at regular file
                 if(stat(temp_full_path,&f_stat)==0){
                     if((f_stat.st_mode & __S_IFMT) == __S_IFREG)
-                        checkCriteria(where_to_look, args, temp_full_path, temp, f_stat);
+                        checkCriteria(where_to_look, args, optArgs, temp_full_path, temp, f_stat);
                 }
                 else{
                     perror("stat error");
@@ -149,7 +187,7 @@ void find_recursive(char *where_to_look, const char *args[3])
                 {
                     //close the stream, because we will reopen it in the recursive call. 
                     closedir(subsubdp);
-                    find_recursive(temp_full_path,args);//call the recursive function call.
+                    find_recursive(temp_full_path,args,optArgs);//call the recursive function call.
                 }
                 free(temp_sub);
                 free(temp_full_path);
@@ -165,21 +203,24 @@ void find_recursive(char *where_to_look, const char *args[3])
     
 }
 
-void checkCriteria(char *where_to_look, const char *args[3], char* temp_full_path, char* temp, struct stat f_stat){
+void checkCriteria(char *where_to_look, const char *args[3], char *optArgs[], char* temp_full_path, char* temp, struct stat f_stat){
+    //check if criteria is empty
     if(strcmp(args[0],"")==0)
     {
-        //if -delete
-        if(strcmp(args[2],"-delete")==0)
+        //if third argument is empty 
+        if(strcmp(args[2],"")==0)
+        {
+            //print the first entry, a file or a subdirectory
+            printf("%s\n",temp_full_path);
+        }
+        //else if third argument is -delete
+        else if(strcmp(args[2],"-delete")==0)
         {
             if(remove(temp_full_path)!=0){
                 printf("find: cannot delete %s",temp_full_path);
             }
         }
-        else
-        {
-            //print the filename
-            printf("%s\n",temp_full_path);
-        }
+        //if criteria empty dont perform action
     }
     //else check criteria
     else
@@ -189,18 +230,23 @@ void checkCriteria(char *where_to_look, const char *args[3], char* temp_full_pat
             //check if name match
             if(strcmp(args[1],temp)==0)
             {
-                
-                //if -delete
-                if(strcmp(args[2],"-delete")==0)
+                //if third argument is empty 
+                if(strcmp(args[2],"")==0)
+                {
+                    //print the first entry, a file or a subdirectory
+                    printf("%s\n",temp_full_path);
+                }
+                //else if third argument is -delete
+                else if(strcmp(args[2],"-delete")==0)
                 {
                     if(remove(temp_full_path)!=0){
                         printf("find: cannot delete %s",temp_full_path);
                     }
                 }
-                else
+                //else if third argument is -action
+                else if(strcmp(args[2],"-action")==0)
                 {
-                    //print the first entry, a file or a subdirectory
-                    printf("%s\n",temp_full_path);
+                    execAction(where_to_look, optArgs, temp_full_path);
                 }
             }
         }
@@ -239,17 +285,23 @@ void checkCriteria(char *where_to_look, const char *args[3], char* temp_full_pat
                 //if mins since modified less than num provided
                 if(diffmins>atoi(num))
                 {
-                    //if -delete
-                    if(strcmp(args[2],"-delete")==0)
+                    //if third argument is empty 
+                    if(strcmp(args[2],"")==0)
+                    {
+                        //print the first entry, a file or a subdirectory
+                        printf("%s\n",temp_full_path);
+                    }
+                    //else if third argument is -delete
+                    else if(strcmp(args[2],"-delete")==0)
                     {
                         if(remove(temp_full_path)!=0){
                             printf("find: cannot delete %s",temp_full_path);
                         }
                     }
-                    else
+                    //else if third argument is -action
+                    else if(strcmp(args[2],"-action")==0)
                     {
-                        //print the first entry, a file or a subdirectory
-                        printf("%s\n",temp_full_path);
+                        execAction(where_to_look, optArgs, temp_full_path);
                     }
                 }
                 
@@ -259,17 +311,23 @@ void checkCriteria(char *where_to_look, const char *args[3], char* temp_full_pat
                 //if mins since modified greater than num provided
                 if(diffmins<atoi(num))
                 {
-                    //if -delete
-                    if(strcmp(args[2],"-delete")==0)
+                    //if third argument is empty 
+                    if(strcmp(args[2],"")==0)
+                    {
+                        //print the first entry, a file or a subdirectory
+                        printf("%s\n",temp_full_path);
+                    }
+                    //else if third argument is -delete
+                    else if(strcmp(args[2],"-delete")==0)
                     {
                         if(remove(temp_full_path)!=0){
                             printf("find: cannot delete %s",temp_full_path);
                         }
                     }
-                    else
+                    //else if third argument is -action
+                    else if(strcmp(args[2],"-action")==0)
                     {
-                        //print the first entry, a file or a subdirectory
-                        printf("%s\n",temp_full_path);
+                        execAction(where_to_look, optArgs, temp_full_path);
                     }
                 }
             }
@@ -284,20 +342,84 @@ void checkCriteria(char *where_to_look, const char *args[3], char* temp_full_pat
             //printf("strcmp return:  %d\n", strcmp(args[1],tempstr)==0);
             if(strcmp(args[1],tempstr)==0)
             {
-                //if -delete
-                if(strcmp(args[2],"-delete")==0)
+                //if third argument is empty 
+                if(strcmp(args[2],"")==0)
+                {
+                    //print the first entry, a file or a subdirectory
+                    printf("%s\n",temp_full_path);
+                }
+                //else if third argument is -delete
+                else if(strcmp(args[2],"-delete")==0)
                 {
                     if(remove(temp_full_path)!=0){
                         printf("find: cannot delete %s",temp_full_path);
                     }
                 }
-                else
+                //else if third argument is -action
+                else if(strcmp(args[2],"-action")==0)
                 {
-                    //print the first entry, a file or a subdirectory
-                    printf("%s\n",temp_full_path);
+                    execAction(where_to_look, optArgs, temp_full_path);
                 }
             }
             free(tempstr);
         }
     }
+}
+
+void execAction(char *where_to_look, char *optArgs[], char* temp_full_path){
+    int status;
+    if(fork() == 0){
+        char *command = malloc(sizeof(char)*2000);
+        char *sp = " ";
+        char *sl = "/";
+        //check if command is supported eg. cat, rm, mv, ls, mkdir, touch
+        if(strcmp(optArgs[0],"cat")==0){
+            command = strcpy(command,optArgs[0]);
+            command = strcat(command,sp);
+            command = strcat(command, temp_full_path);
+            system(command);
+        }
+        else if(strcmp(optArgs[0],"rm")==0){
+            command = strcpy(command,optArgs[0]);
+            command = strcat(command,sp);
+            command = strcat(command, temp_full_path);
+            system(command);
+        }
+        else if(strcmp(optArgs[0],"mv")==0){
+            command = strcpy(command,optArgs[0]);
+            command = strcat(command, sp);
+            command = strcat(command, temp_full_path);
+            command = strcat(command, sp);
+            command = strcat(command, where_to_look);
+            command = strcat(command, sl);
+            command = strcat(command, optArgs[1]);
+            system(command);
+        }
+        else if(strcmp(optArgs[0],"ls")==0){
+            command = strcpy(command, optArgs[0]);
+            command = strcat(command, sp);
+            command = strcat(command, where_to_look);
+            system(command);
+        }
+        else if(strcmp(optArgs[0],"mkdir")==0){
+            command = strcpy(command, optArgs[0]);
+            command = strcat(command, sp);
+            command = strcat(command, where_to_look);
+            command = strcat(command, sl);
+            command = strcat(command, optArgs[1]);
+            system(command);
+        }
+        else if(strcmp(optArgs[0],"touch")==0){
+            command = strcpy(command, optArgs[0]);
+            command = strcat(command, sp);
+            command = strcat(command, where_to_look);
+            command = strcat(command, sl);
+            command = strcat(command, optArgs[1]);
+            system(command);
+        }
+        free(command);
+        exit(0);
+    }
+    else
+        wait(&status);
 }
