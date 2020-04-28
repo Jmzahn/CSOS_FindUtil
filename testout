@@ -1,0 +1,123 @@
+
+Test: find where-to-look
+
+Linux utility:
+
+testdir
+testdir/dir1
+testdir/dir1/dir2
+testdir/dir1/dir2/test5
+testdir/dir1/dir2/test6
+testdir/dir1/test3
+testdir/dir1/test4
+testdir/dir3
+testdir/dir3/test7
+testdir/dir3/test8
+testdir/test1
+testdir/test2
+
+My find utility:
+
+testdir
+testdir/dir1
+testdir/dir1/dir2
+testdir/dir1/dir2/test5
+testdir/dir1/dir2/test6
+testdir/dir1/test3
+testdir/dir1/test4
+testdir/dir3
+testdir/dir3/test7
+testdir/dir3/test8
+testdir/test1
+testdir/test2
+
+Test: find where-to-look -name <name>
+
+Linux utility:
+
+testdir/dir1/dir2/test5
+
+My find utility:
+
+testdir/dir1/dir2/test5
+
+Test: find where-to-look -mmin <num>
+
+Linux utility:
+
+testdir/dir1/dir2/test6
+testdir/dir1/test3
+testdir/dir3/test7
+testdir/dir3/test8
+
+My find utility:
+
+testdir
+testdir/dir1
+testdir/dir1/dir2
+testdir/dir1/dir2/test5
+testdir/dir1/dir2/test6
+testdir/dir1/test3
+testdir/dir1/test4
+testdir/dir3
+testdir/dir3/test7
+testdir/dir3/test8
+testdir/test1
+testdir/test2
+
+Test: find where-to-look -inum <num>
+
+Linux utility:
+
+testdir/dir1/test3
+
+My find utility:
+
+testdir/dir1/test3
+
+Test: find where-to-look criteria -delete
+
+Linux utility:
+
+
+My find utility:
+
+
+Test: find where-to-look criteria -action
+
+Linux utility: find testdir -name test1 -exec cat {} \;
+
+test4
+My find utility:
+
+test3
+My find utility: rm
+
+
+My find utility: mv
+
+
+My find utility: ls
+
+test55
+test6
+
+My find utility: touch
+
+
+My find utility: mkdir
+
+
+My find utility: 
+
+testdir
+testdir/dir1
+testdir/dir1/dir2
+testdir/dir1/dir2/test55
+testdir/dir1/dir2/test6
+testdir/dir1/test3
+testdir/dir3
+testdir/dir3/mkdirtest
+testdir/dir3/test7
+testdir/dir3/test8
+testdir/dir3/touchtest
