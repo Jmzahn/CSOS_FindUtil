@@ -34,19 +34,19 @@ echo -e "\nTest: find where-to-look criteria -action\n"
 echo -e "Linux utility: find testdir -name test1 -exec cat {} \\;\n"
 find testdir -name test4 -exec cat {} \;
 echo -e "\nMy find utility:\n"
-./find -w testdir -n test4 -a cat
+./find -w testdir -n test3 -a cat
 
 echo -e "\nMy find utility: rm\n"
-./find -w testdir -n test5 -a rm
+./find -w testdir -n test4 -a rm
 
 echo -e "\nMy find utility: mv\n"
-./find -w testdir -n test4 -a mv test44
+./find -w testdir -n test5 -a mv test55
 
 echo -e "\nMy find utility: ls\n"
-./find -w testdir -n test4 -a ls
+./find -w testdir -n test6 -a ls
 
 echo -e "\nMy find utility: touch\n"
-./find -w testdir -n test4 -a touch touchtest
+./find -w testdir -n test7 -a touch touchtest
 
 echo -e "\nMy find utility: mkdir\n"
-./find -w testdir -n test4 -a mkdir mkdirtest
+./find -w testdir -n test8 -a mkdir mkdirtest
