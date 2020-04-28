@@ -40,7 +40,7 @@ echo -e "\nMy find utility: touch\n"
 ./find -w testdir -n test4 -a touch touchtest
 
 echo -e "\nMy find utility: rm\n"
-./find -w testdir -n touchtest -a rm
+./find -w testdir -n test5 -a rm
 
 echo -e "\nMy find utility: mv\n"
 ./find -w testdir -n test4 -a mv test44
