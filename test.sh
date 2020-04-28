@@ -50,3 +50,6 @@ echo -e "\nMy find utility: touch\n"
 
 echo -e "\nMy find utility: mkdir\n"
 ./find -w testdir -n test8 -a mkdir mkdirtest
+
+echo -e "\nMy find utility: \n"
+./find -w testdir
