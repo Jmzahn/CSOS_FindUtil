@@ -9,29 +9,34 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+//while loop with inner recursive calls
 void find_recursive(char *where_to_look, const char *args[3], char *optArgs[]);
 
-void checkCriteria(char *where_to_look, const char *args[3], char *optArgs[], char* temp_full_path, char* temp, struct stat f_stat);
+//interpretation of find arguments
+void checkCriteria(char *where_to_look, const char *args[3], char *optArgs[], char *temp_full_path, char *temp, struct stat f_stat);
 
-void execAction(char *where_to_look, char *optArgs[], char* temp_full_path);
+//interpretation of action arguments
+void execAction(char *where_to_look, char *optArgs[], char *temp_full_path);
 
 int main(int argc, char *argv[])
 {
-    int pathGiven = 1;
     char *whereToLook, *name, *mmin, *inum;
     char buf[_PC_PATH_MAX];
     const char *args[3];
     args[0] = "";//criteria flag
     args[1] = "";//criteria
     args[2] = "";//action/delete
-    char **optArgs;
+    char **actionArgs;
+    //getopt flag
     int c;
+    //arg flags
     int w = 0;
     int n = 0;
     int m = 0;
     int i = 0;
     int d = 0;
     int a = 0;
+    int t = 0;
     
     //only find was called
     if(argc == 1)
@@ -42,12 +47,12 @@ int main(int argc, char *argv[])
             return -1;
         }
         
-        find_recursive(buf, args, optArgs);
+        find_recursive(buf, args, actionArgs);
     }
     else//find and args
     {
         //USAGE: find -w <whereToLook> criteria(-n/-m/-i) <name/mmin/inum> action(-d/-a) <optAction>
-        while((c = getopt(argc,argv, "w:n:m:i:da")) != -1){
+        while((c = getopt(argc,argv, "w:n:m:i:daht")) != -1){
             switch(c){
                 case 'w':
                     w = 1;
@@ -71,6 +76,12 @@ int main(int argc, char *argv[])
                 case 'a':
                     a = 1;
                     break;
+                case 't':
+                    t = 1;
+                    break;
+                case 'h':
+                    printf("Usage: %s -w <whereToLook> criteria(-n/-m/-i) <name/mmin/inum> action(-d/-a) <optAction>",argv[0]);
+                    return(0);
                 default:
                     printf("Invalid option detected.\n");
             }
@@ -112,19 +123,22 @@ int main(int argc, char *argv[])
         }
         else if(a==1){
             args[2] = "-action";
-            optArgs = argv;
+            actionArgs = argv;
         }
-        //printf("whereToLook :%s\n",whereToLook);
-        //printf("args[0] :%s\n",args[0]);
-        //printf("args[1] :%s\n",args[1]);
-        //printf("args[2] :%s\n",args[2]);
-        //if (argc > 0) {
-		//    printf("There are %d command-line arguments left to process:\n", argc);
-		//    for (i = 0; i < argc; i++) {
-		//	    printf("Argument %d: '%s'\n", i + 1, optArgs[i]);
-		//    }
-	    //}
-        find_recursive(whereToLook, args, optArgs);
+        if(t==1){
+            printf("whereToLook :%s\n",whereToLook);
+            printf("args[0] :%s\n",args[0]);
+            printf("args[1] :%s\n",args[1]);
+            printf("args[2] :%s\n",args[2]);
+            if (argc > 0) {
+                printf("There are %d command-line arguments left to process:\n", argc);
+                for (i = 0; i < argc; i++) {
+                    printf("Argument %d: '%s'\n", i + 1, actionArgs[i]);
+                }
+            }
+        }
+
+        find_recursive(whereToLook, args, actionArgs);
     }
     return 0;
 }
@@ -189,6 +203,7 @@ void find_recursive(char *where_to_look, const char *args[3], char *optArgs[])
                     closedir(subsubdp);
                     find_recursive(temp_full_path,args,optArgs);//call the recursive function call.
                 }
+                //free malloced memory
                 free(temp_sub);
                 free(temp_full_path);
             }
@@ -361,6 +376,7 @@ void checkCriteria(char *where_to_look, const char *args[3], char *optArgs[], ch
                     execAction(where_to_look, optArgs, temp_full_path);
                 }
             }
+            //free malloced memory
             free(tempstr);
         }
     }
@@ -368,11 +384,13 @@ void checkCriteria(char *where_to_look, const char *args[3], char *optArgs[], ch
 
 void execAction(char *where_to_look, char *optArgs[], char* temp_full_path){
     int status;
+    //fork and if child then interpret action
     if(fork() == 0){
         char *command = malloc(sizeof(char)*2000);
         char *sp = " ";
         char *sl = "/";
         //check if command is supported eg. cat, rm, mv, ls, mkdir, touch
+        //then interpret and run command
         if(strcmp(optArgs[0],"cat")==0){
             command = strcpy(command,optArgs[0]);
             command = strcat(command,sp);
@@ -417,9 +435,11 @@ void execAction(char *where_to_look, char *optArgs[], char* temp_full_path){
             command = strcat(command, optArgs[1]);
             system(command);
         }
+        //free malloced memory
         free(command);
         exit(0);
     }
+    //if parent then wait
     else
         wait(&status);
 }
