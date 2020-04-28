@@ -1,3 +1,5 @@
+//Written by Jacob Zahn for Professor Yong Chen's CS4352 Operating Systems, Computer Science, Texas Tech University
+//linux find utility like C implimentation as described in Project2.pdf
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
