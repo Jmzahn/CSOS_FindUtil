@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
                     t = 1;
                     break;
                 case 'h':
-                    printf("Usage: %s -w <whereToLook> criteria(-n/-m/-i) <name/mmin/inum> action(-d/-a) <optAction>",argv[0]);
+                    printf("Usage: %s -w <whereToLook> criteria(-n/-m/-i) <name/mmin/inum> action(-d/-a) <optAction>\n",argv[0]);
                     return(0);
                 default:
                     printf("Invalid option detected.\n");
@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
         }
         if(n+m+i>1)
         {
-            printf("Too many criteria flags provided!");
+            printf("Too many criteria flags provided!\n");
             return -1;
         }
         else if(n==1){
@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
             args[1] = inum;
         }
         if(a+d>1){
-            printf("Too many action flags provided!\nCannot delete and preform action!");
+            printf("Too many action flags provided!\nCannot delete and preform action!\n");
             return -1;
         }
         else if(d==1){
